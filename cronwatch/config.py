@@ -1,68 +1,80 @@
-"""Configuration loader for cronwatch."""
+"""Configuration loading and dataclasses for cronwatch."""
 
-import os
-import yaml
+import tomllib
 from dataclasses import dataclass, field
-from typing import List, Optional
+from pathlib import Path
+from typing import Optional
 
 
 @dataclass
 class JobConfig:
     name: str
     schedule: str
-    timeout: int = 300  # seconds
-    alert_after: int = 60  # seconds of delay before alerting
-    notify: List[str] = field(default_factory=list)
+    max_duration: int = 3600  # seconds
+    alert_on_failure: bool = True
+    alert_on_overdue: bool = True
 
 
 @dataclass
 class AlertConfig:
-    email: Optional[str] = None
+    smtp_host: Optional[str] = None
+    smtp_port: int = 587
+    smtp_user: Optional[str] = None
+    smtp_password: Optional[str] = None
+    from_address: Optional[str] = None
+    to_addresses: list = field(default_factory=list)
     webhook_url: Optional[str] = None
+    webhook_headers: dict = field(default_factory=dict)
+    webhook_timeout: int = 10
+    slack_webhook_url: Optional[str] = None
     slack_channel: Optional[str] = None
+    slack_username: str = "cronwatch"
+    slack_icon_emoji: str = ":alarm_clock:"
 
 
 @dataclass
 class CronwatchConfig:
-    jobs: List[JobConfig] = field(default_factory=list)
+    jobs: list = field(default_factory=list)
     alert: AlertConfig = field(default_factory=AlertConfig)
-    log_file: str = "/var/log/cronwatch.log"
-    check_interval: int = 30  # seconds between checks
+    history_path: str = "~/.cronwatch/history.json"
+    check_interval: int = 60
 
 
 def load_config(path: str) -> CronwatchConfig:
-    """Load and parse the YAML configuration file."""
-    if not os.path.exists(path):
-        raise FileNotFoundError(f"Config file not found: {path}")
+    with open(path, "rb") as fh:
+        raw = tomllib.load(fh)
 
-    with open(path, "r") as f:
-        raw = yaml.safe_load(f)
-
-    if not isinstance(raw, dict):
-        raise ValueError("Config file must be a YAML mapping")
-
-    jobs = []
-    for job_data in raw.get("jobs", []):
-        if "name" not in job_data or "schedule" not in job_data:
-            raise ValueError(f"Job entry missing 'name' or 'schedule': {job_data}")
-        jobs.append(JobConfig(
-            name=job_data["name"],
-            schedule=job_data["schedule"],
-            timeout=job_data.get("timeout", 300),
-            alert_after=job_data.get("alert_after", 60),
-            notify=job_data.get("notify", []),
-        ))
-
-    alert_data = raw.get("alert", {})
+    alert_raw = raw.get("alert", {})
     alert = AlertConfig(
-        email=alert_data.get("email"),
-        webhook_url=alert_data.get("webhook_url"),
-        slack_channel=alert_data.get("slack_channel"),
+        smtp_host=alert_raw.get("smtp_host"),
+        smtp_port=alert_raw.get("smtp_port", 587),
+        smtp_user=alert_raw.get("smtp_user"),
+        smtp_password=alert_raw.get("smtp_password"),
+        from_address=alert_raw.get("from_address"),
+        to_addresses=alert_raw.get("to_addresses", []),
+        webhook_url=alert_raw.get("webhook_url"),
+        webhook_headers=alert_raw.get("webhook_headers", {}),
+        webhook_timeout=alert_raw.get("webhook_timeout", 10),
+        slack_webhook_url=alert_raw.get("slack_webhook_url"),
+        slack_channel=alert_raw.get("slack_channel"),
+        slack_username=alert_raw.get("slack_username", "cronwatch"),
+        slack_icon_emoji=alert_raw.get("slack_icon_emoji", ":alarm_clock:"),
     )
+
+    jobs = [
+        JobConfig(
+            name=j["name"],
+            schedule=j["schedule"],
+            max_duration=j.get("max_duration", 3600),
+            alert_on_failure=j.get("alert_on_failure", True),
+            alert_on_overdue=j.get("alert_on_overdue", True),
+        )
+        for j in raw.get("jobs", [])
+    ]
 
     return CronwatchConfig(
         jobs=jobs,
         alert=alert,
-        log_file=raw.get("log_file", "/var/log/cronwatch.log"),
-        check_interval=raw.get("check_interval", 30),
+        history_path=raw.get("history_path", "~/.cronwatch/history.json"),
+        check_interval=raw.get("check_interval", 60),
     )
