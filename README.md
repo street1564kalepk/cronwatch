@@ -23,6 +23,13 @@ jobs:
     schedule: "*/15 * * * *"
     timeout: 60
     alert: slack
+
+alerts:
+  email:
+    to: ops@example.com
+    smtp_host: smtp.example.com
+  slack:
+    webhook_url: https://hooks.slack.com/services/YOUR/WEBHOOK/URL
 ```
 
 Start the daemon:
