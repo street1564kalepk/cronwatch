@@ -48,11 +48,29 @@ def build_prune_parser(subparsers: argparse._SubParsersAction) -> argparse.Argum
     return parser
 
 
-def run_prune(args: argparse.Namespace) -> None:
-    """Execute the prune sub-command."""
+def _validate_prune_args(args: argparse.Namespace) -> None:
+    """Validate prune arguments, exiting with an error message on failure.
+
+    Raises ``SystemExit`` if:
+    - Neither ``--max-age-days`` nor ``--max-runs`` is provided.
+    - ``--max-age-days`` or ``--max-runs`` is not a positive integer.
+    """
     if args.max_age_days is None and args.max_runs is None:
         logger.error("Specify at least one of --max-age-days or --max-runs.")
         sys.exit(1)
+
+    if args.max_age_days is not None and args.max_age_days <= 0:
+        logger.error("--max-age-days must be a positive integer, got %d.", args.max_age_days)
+        sys.exit(1)
+
+    if args.max_runs is not None and args.max_runs <= 0:
+        logger.error("--max-runs must be a positive integer, got %d.", args.max_runs)
+        sys.exit(1)
+
+
+def run_prune(args: argparse.Namespace) -> None:
+    """Execute the prune sub-command."""
+    _validate_prune_args(args)
 
     config = load_config(args.config)
     store = HistoryStore(config.history_path)
