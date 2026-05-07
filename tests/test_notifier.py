@@ -68,6 +68,20 @@ def test_send_webhook_payload_is_json(webhook_config):
     assert captured["content_type"] == "application/json"
 
 
+def test_send_webhook_uses_configured_timeout(webhook_config):
+    """Ensure the timeout from WebhookConfig is passed through to urlopen."""
+    captured = {}
+
+    def fake_urlopen(req, timeout):
+        captured["timeout"] = timeout
+        return _mock_response(200)
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        send_webhook(webhook_config, {"event": "test"})
+
+    assert captured["timeout"] == webhook_config.timeout
+
+
 def test_send_slack_calls_webhook(slack_config):
     with patch("cronwatch.notifier.send_webhook", return_value=True) as mock_wh:
         result = send_slack(slack_config, "hello")
