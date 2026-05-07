@@ -46,6 +46,16 @@ cronwatch run --job daily-backup -- /usr/local/bin/backup.sh
 
 cronwatch will track execution time, detect missed runs, and fire alerts if a job exceeds its timeout or fails to execute on schedule.
 
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `cronwatch start` | Start the monitoring daemon |
+| `cronwatch stop` | Stop the running daemon |
+| `cronwatch status` | Show status of all monitored jobs |
+| `cronwatch run` | Wrap a command and report its result |
+| `cronwatch check` | Validate your config file |
+
 ## Alerts
 
 Supported alert channels: `email`, `slack`, `webhook`. Configure credentials under the `alerts` section of your config file.
