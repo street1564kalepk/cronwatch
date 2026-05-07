@@ -35,6 +35,9 @@ def send_webhook(config: WebhookConfig, payload: dict) -> bool:
         with urllib.request.urlopen(req, timeout=config.timeout) as resp:
             logger.debug("Webhook response: %s", resp.status)
             return resp.status < 400
+    except urllib.error.HTTPError as exc:
+        logger.error("Webhook delivery failed with HTTP %s: %s", exc.code, exc.reason)
+        return False
     except urllib.error.URLError as exc:
         logger.error("Webhook delivery failed: %s", exc)
         return False
