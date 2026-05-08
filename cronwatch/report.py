@@ -47,6 +47,23 @@ def all_jobs_summary(store: HistoryStore, since: Optional[datetime] = None) -> L
     return [job_summary(store, name, since=since) for name in job_names]
 
 
+def failing_jobs(store: HistoryStore, since: Optional[datetime] = None, threshold: float = 100.0) -> List[dict]:
+    """Return summaries for jobs whose success rate is below the given threshold.
+
+    Args:
+        store: The history store to query.
+        since: If provided, only consider runs on or after this datetime.
+        threshold: Success rate percentage below which a job is considered failing.
+                   Defaults to 100.0, returning any job with at least one failure.
+
+    Returns:
+        A list of job summary dicts sorted by success rate ascending.
+    """
+    summaries = all_jobs_summary(store, since=since)
+    failing = [s for s in summaries if s["success_rate"] < threshold]
+    return sorted(failing, key=lambda s: s["success_rate"])
+
+
 def format_report(summaries: List[dict]) -> str:
     """Format a list of job summaries as a human-readable string."""
     if not summaries:
